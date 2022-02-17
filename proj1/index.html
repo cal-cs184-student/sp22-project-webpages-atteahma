@@ -84,9 +84,9 @@
 
         With sampling rate 1, 4, 16 respectively. You can see in the first image the staircasing pattern is very jagged, since there is no sub-sampling being done--all pixels are white or red. In the sampling rate 4 case, some jaggies are still percievable, but the edge between red and white is much more blurred. In the sampling rate 16 case, the red white edges are almost entirely blurred out, and they look nearly perfectly straight, since in reality the supersampling is taking into account 4x more detailed edges (since an edge only lies along one line across one axis of the 4x4).
         <br/>
-        <img src="2_2_1.png" width="350px">
-        <img src="2_2_2.png" width="350px">
-        <img src="2_2_3.png" width="350px">
+        <img src="2_2_1.png" width="300px">
+        <img src="2_2_2.png" width="300px">
+        <img src="2_2_3.png" width="300px">
 <br/><br/>
 <h2>Task 3: Transforms</h2>
 
@@ -122,15 +122,15 @@
         1 sample per pixel, nearest sampling at 16 samples per pixel, bilinear sampling at 1 sample per pixel, and bilinear
         sampling at 16 samples per pixel.</h4>
 
-        <img src="./nearest_1sr.png" width="500px">
-        <img src="./bilinear_1sr.png" width="500px">
+        <img src="./nearest_1sr.png" width="450px">
+        <img src="./bilinear_1sr.png" width="450px">
         <br/>
-        <pre>                             nearest, 1x                                                           bilinear, 1x</pre>
+        <pre>                             nearest, 1x                                                  bilinear, 1x</pre>
         <br/>
-        <img src="./nearest_16sr.png" width="500px">
-        <img src="./bilinear_16sr.png" width="500px">
+        <img src="./nearest_16sr.png" width="450px">
+        <img src="./bilinear_16sr.png" width="450px">
         <br/>
-        <pre>                             nearest, 16x                                                          bilinear, 16x</pre>
+        <pre>                             nearest, 16x                                                 bilinear, 16x</pre>
         <br/>
 
     <h4>Comment on the relative differences. Discuss when there will be a large difference between the two methods and
@@ -161,14 +161,14 @@
 
         The circular aliasing found in the L_ZERO, P_NEAR (most naive) image is clear. Changing to bilinear pixel sampling removes some of the very fine aliasing, but the major aliasing is still entirely there. If we instead change to nearest level sampling, almost entirely all of the aliasing noise is gone. Adding bilinear pixel sampling to this further removes some of the finer aliasing, resulting in an image with significantly reduced aliasing.
         <br/>
-        <img src="./L_ZERO_P_NEAR.png" width="500px">
-        <img src="./L_ZERO_P_LINEAR.png" width="500px">
+        <img src="./L_ZERO_P_NEAR.png" width="450px">
+        <img src="./L_ZERO_P_LINEAR.png" width="450px">
         <br/>
-        <pre>                            L_ZERO, P_NEAR                                                     L_ZERO, P_LINEAR</pre>
+        <pre>                         L_ZERO, P_NEAR                                                L_ZERO, P_LINEAR</pre>
         <br/>
-        <img src="./L_NEAR_P_NEAR.png" width="500px">
-        <img src="./L_NEAR_P_LINEAR.png" width="500px">
+        <img src="./L_NEAR_P_NEAR.png" width="450px">
+        <img src="./L_NEAR_P_LINEAR.png" width="450px">
         <br/>
-        <pre>                            L_NEAR, P_NEAR                                                     L_NEAR, P_LINEAR</pre>
+        <pre>                         L_NEAR, P_NEAR                                                L_NEAR, P_LINEAR</pre>
 </body>
 </html>
