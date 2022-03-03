@@ -1,7 +1,295 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+  <style>
+    body {
+      padding: 100px;
+      width: 1000px;
+      margin: auto;
+      text-align: left;
+      font-weight: 300;
+      font-family: 'Open Sans', sans-serif;
+      color: #121212;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Source Sans Pro', sans-serif;
+    }
+  </style>
+  <title>CS 184 Mesh Editor</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+  <h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2022</h1>
+  <h1 align="middle">Project 2: Mesh Editor</h1>
+  <h2 align="middle">Atte Ahmavaara</h2>
+
+  <br/>
+  <div align="middle">
+    <img src="./images/title_teapot.png" align="middle" width="500px"/>
+  </div>
+  <br/>
+
+  <div>
+
+    <h2 align="middle">Overview</h2>
+    <p>In this project, I implemented the beginnings of a geometry engine, allowing for the drawing of Bezier curves and surfaces, as well as fundamental transforms for triangle-mesh operations. One of the major concepts I learned through completing this project is how the iteration over the elements of a mesh works. It is not usually the case that we linearly loop over all edges or vertices and conditionally apply some operation, as I had naively assumed before. Most iteration over meshes actually occurs by iterating through the actual data structures that describe the mesh, much like an arbitrarily shaped 3D LinkedList. Further, I learned to appreciate just how convenient the concept of halfedges are. They make handling seemingly complex relational queries, such as iterating over a vertices' faces' outer vertices, very intuitive.</p>
+
+    <h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
+
+    <h3 align="middle">Part 1: Bezier Curves with 1D de Casteljau Subdivision</h3>
+
+      <p>In this part, I implemented the 1 dimensional case of de Casteljau's subdivision algorithm. This works by iteratively generating a set of n - 1 points from n points, with each new point defined by a linear interpolation of consecutive points. Applying this process n - 1 times, we are left with a single point, which corresponds to a point on the bezier curve.</p>
+
+      <p>I implemented this iteration step using a simple loop over consecutive points, linearly interpolating each pair, and adding this new point to an array. The code that we were given then applies this iteration step n - 1 times, reaching the final point.</p>
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="./images/p1_1.png" align="middle" width="350px" />
+            <figcaption align="middle">6 Control Points</figcaption>
+          </td>
+          <td>
+            <img src="./images/p1_2.png" align="middle" width="350px" />
+            <figcaption align="middle">1 iteration of de Casteljau</figcaption>
+          </td>
+          <td>
+            <img src="./images/p1_3.png" align="middle" width="350px" />
+            <figcaption align="middle">2 iterations of de Casteljau</figcaption>
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="./images/p1_4.png" align="middle" width="350px" />
+            <figcaption align="middle">3 iterations of de Casteljau</figcaption>
+          </td>
+          <td>
+            <img src="./images/p1_5.png" align="middle" width="350px" />
+            <figcaption align="middle">4 iterations of de Casteljau</figcaption>
+          </td>
+          <td>
+            <img src="./images/p1_6.png" align="middle" width="350px" />
+            <figcaption align="middle">Fully evaluated point on Bezier curve</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <br>
+    <br/>
+
+    <div align="middle">
+      <img src="./images/p1_7.png" align="middle" width="700px"/>
+      <figcaption align="middle">Different Bezier Curve</figcaption>
+    </div>
+
+    <h3 align="middle">Part 2: Bezier Surfaces with Separable 1D de Casteljau Subdivision</h3>
+
+      <p>de Casteljau's algorithm can be adapted to 3D surfaces by first applying 1D de Casteljau to each of the "rows" individually (in our point-grid) to get 1 point per "row", as a function of one of our input parameters u. Then, we run one final round of 1D de Casteljau with parameter v on those resulting points, to get exactly 1 point that is a function of our input parameters u and v.</p>
+
+      <p>I implemented this by using three different functions. The first, and lowest level function evaluates one single step of de Casteljau. The next function uses the iteration step of function 1 to run 1D de Casteljau, namely applying the first function to a 1D array of points repeatedly until only 1 point remains. The final, and highest level function applies function 2 to each of the "rows" individually, and then applies function 2 on those resulting points to get our final point on the surface.</p>
+
+      <div align="middle">
+        <img src="./images/p2_1.png" align="middle" width="700px"/>
+        <figcaption align="middle">teapot using bezier surfaces</figcaption>
+      </div>
+
+    <h2 align="middle">Section II: Sampling</h2>
+
+    <h3 align="middle">Part 3: Area-Weighted Vertex Normals</h3>
+
+      <p>To calculate an area-weighted vertex normal, I begin by iterating over faces that contain the given vertex by using half edges. For each of these faces, I compute its normal by the cross product of two vectors. Notably, I divide the cross by 2, and leave the magnitude otherwise untouched, since the magnitude of the cross product is double the area of the triangle. This bakes in the "area-weighted" part into the normal vector. After collecting all of the area-weighted normals, I sum them, and then take the unit vector of the sum, which is the returned normal.</p>
+
+      <div align="middle">
+        <table style="width=100%">
+          <tr>
+            <td>
+              <img src="./images/p3_1.png" align="middle" width="500px" />
+              <figcaption align="middle">Without Vertex Normals (wireframe)</figcaption>
+            </td>
+            <td>
+              <img src="./images/p3_2.png" align="middle" width="500px" />
+              <figcaption align="middle">With Vertex Normals (wireframe)</figcaption>
+            </td>
+          </tr>
+          <br>
+          <tr>
+            <td>
+              <img src="./images/p3_3.png" align="middle" width="500px" />
+              <figcaption align="middle">Without Vertex Normals</figcaption>
+            </td>
+            <td>
+              <img src="./images/p3_4.png" align="middle" width="500px" />
+              <figcaption align="middle">With Vertex Normals</figcaption>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+    <h3 align="middle">Part 4: Half-edge Flip</h3>
+
+      <p>To implement the edge flip operation, I begin by collecting the 4 vertices that make up the adjacent two triangles to the edge. I re-assign each of their half edges to the correct ones, making sure to re-use the original half edges. I then re-use the faces from the original mesh, and re-assign their half edges respectively. I then have a helper function that sets all of the correct pointers for the three half edges that make up a triangle, which I call for each of the two "new" triangles.</p>
+
+      <p>The trick I used to have both edge flip and edge split function properly on the first compilation was to save all relevant pointers to a specified operation into geometrically descriptive variables. Namely, I labeled each of the vertices a letter abc, and then described the other elements (halfedges, edges, faces) in terms of these vertices, i.e. he_ab, f_bca, etc. This enabled me to match formulas from lectures/notes exactly, and think only about the geometrical interpretation without worrying about the implementation specifics of a mesh.</p>
+
+      <div align="middle">
+        <table style="width=100%">
+          <tr>
+            <td>
+              <img src="./images/p4_1.png" align="middle" width="500px" />
+              <figcaption align="middle">Original Mesh</figcaption>
+            </td>
+            <td>
+              <img src="./images/p4_2.png" align="middle" width="500px" />
+              <figcaption align="middle">After a few edge flips</figcaption>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+    <h3 align="middle">Part 5: Half-edge Split</h3>
+
+      <p>To implement the edge split operation, I begin by creating 4 new faces, 1 new vertex, 8 new half edges, and 3 new edges, while making sure to re-use the original edge as the 4th edge (for iteration purposes in task 6). I proceed by setting the position of the new vertex as the midpoint between the original edge's vertices. I then set all of the elements' (new and old) halfedges to the correct halfedges in the new mesh. With all of the elements finished except for the halfedges, I proceed by using the same helper function as in task 4, which sets all of the correct pointers for the three half edges that make up a triangle, which I call for each of the four "new" triangles. Now all of the elements have correct pointers, and it only remains to delete the two discarded faces and two discarded halfedges.</p>
+
+      <p>The trick I used to have both edge flip and edge split function properly on the first compilation was to save all relevant pointers to a specified operation into geometrically descriptive variables. Namely, I labeled each of the vertices a letter abc, and then described the other elements (halfedges, edges, faces) in terms of these vertices, i.e. he_ab, f_bca, etc. This enabled me to match formulas from lectures/notes exactly, and think only about the geometrical interpretation without worrying about the implementation specifics of a mesh.</p>
+
+      <div align="middle">
+        <table style="width=100%">
+          <tr>
+            <td>
+              <img src="./images/p5_1.png" align="middle" width="500px" />
+              <figcaption align="middle">Original Mesh</figcaption>
+            </td>
+            <td>
+              <img src="./images/p5_2.png" align="middle" width="500px" />
+              <figcaption align="middle">After a few Edge Splits</figcaption>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <img src="./images/p5_3.png" align="middle" width="500px" />
+              <figcaption align="middle">Original Mesh</figcaption>
+            </td>
+            <td>
+              <img src="./images/p5_4.png" align="middle" width="500px" />
+              <figcaption align="middle">After a few Edge Splits and Edge Flips</figcaption>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+    <h3 align="middle">Part 6: Loop subdivision for Mesh Upsampling</h3>
+
+    <p>To implement loop subdivision, I begin by iterating over all of the vertices and setting their future position (newPosition) to the second weighted averaging scheme in the figure below. Then I do a similar iteration over all edges, where I set the edges' future midpoints to the first weighted averaging scheme in the figure below. For both the vertices and edges, I reset their isNew fields to false, to mark that they existed in the original mesh. Further, I added a "hasSplit" field to each edge which is set to false here, which helps us ensure that no edge is split twice, while only flipping actually new edges (the blue edges) from the spec. With the precomputations finished, I begin to loop over all of the edges. For any edge that has not split yet, I call the task 5 split edge function on it, and then set the returned new midpoint vertex's future position to be the edge's precomputed future position. The hasSplit field, combined with the fact that new edges are appended to the end of the edge list, and not deleting any edges in edgeSplit, ensures that the iteration will complete as expected and will stop eventually. Now, I iterate over all edges again, flipping any edge that is new and has exactly one new vertex. To finish off, I set the actual positions of each vertex to the precomputed future position.</p>
+
+    <p>One slightly special implementation trick I used was to be very cognizant of floating point errors. These errors can propagate over time, especially with all of the weighting fractions that we use, so not needing to have as much uncertainty about this one type of bug helped greatly.</p>
+
+    <div align="middle">
+      <img src="./images/p6_fig.jpg" align="middle" width="700px"/>
+      <figcaption align="middle">Weighted Averaging Schemes</figcaption>
+    </div>
+
+    <p>It is clear from the images below that loop subdivision smoothes meshes, resulting in significantly less prominant sharp edges and corners. It is generally possible to mitigate this effect by pre-splitting edges originating from that sharp vertex/edge, since pre-splitting adds more triangles, and thus bakes more "current" (from the original mesh) detail into the mesh going into the upsampling. In a way, pre-splitting is like reducing the "radius" of smoothing near the splits.</p>
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="./images/p6_1.png" align="middle" width="500px" />
+            <figcaption align="middle">No upsampling</figcaption>
+          </td>
+          <td>
+            <img src="./images/p6_2.png" align="middle" width="500px" />
+            <figcaption align="middle">One Iteration of Loop Subdivision Upsampling</figcaption>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <img src="./images/p6_3.png" align="middle" width="500px" />
+            <figcaption align="middle">No upsampling</figcaption>
+          </td>
+          <td>
+            <img src="./images/p6_4.png" align="middle" width="500px" />
+            <figcaption align="middle">One Iteration of Loop Subdivision Upsampling</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <br>
+    <br/>
+    <p>The asymmetry is caused by the mesh being asymmetric. Even though the appearance of the faces of the cube make up a symmetric object, the mesh is not symmetric. To fix the asymmetry we see develop in the cube, we can split each of the diagonal edges such that the cube is fully symmetric (48 ways). Because we do all of our future position calculations for upsampling before updating positions, this symmetry ensures that our final result is also symmetric.</p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="./images/p6_5.png" align="middle" width="350px" />
+            <figcaption align="middle">No Upsampling (no preprocess)</figcaption>
+          </td>
+          <td>
+            <img src="./images/p6_6.png" align="middle" width="350px" />
+            <figcaption align="middle">2 Iterations of Upsampling (no preprocess)</figcaption>
+          </td>
+          <td>
+            <img src="./images/p6_7.png" align="middle" width="350px" />
+            <figcaption align="middle">4 Iterations of Upsampling (no preprocess)</figcaption>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <img src="./images/p6_8.png" align="middle" width="350px" />
+            <figcaption align="middle">No Upsampling (with preprocess)</figcaption>
+          </td>
+          <td>
+            <img src="./images/p6_9.png" align="middle" width="350px" />
+            <figcaption align="middle">2 Iterations of Upsampling (with preprocess)</figcaption>
+          </td>
+          <td>
+            <img src="./images/p6_10.png" align="middle" width="350px" />
+            <figcaption align="middle">4 Iterations of Upsampling (with preprocess)</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+</body>
 </html>
+
+<!--
+<div align="middle">
+  <table style="width=100%">
+    <tr>
+      <td>
+        <img src="./images/image1.png" align="middle" width="400px" />
+        <figcaption align="middle">Caption goes here.</figcaption>
+      </td>
+      <td>
+        <img src="./images/image2.png" align="middle" width="400px" />
+        <figcaption align="middle">Caption goes here.</figcaption>
+      </td>
+    </tr>
+    <br>
+    <tr>
+      <td>
+        <img src="./images/image3.png" align="middle" width="400px" />
+        <figcaption align="middle">Caption goes here.</figcaption>
+      </td>
+      <td>
+        <img src="./images/image4.png" align="middle" width="400px" />
+        <figcaption align="middle">Caption goes here.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+-->
