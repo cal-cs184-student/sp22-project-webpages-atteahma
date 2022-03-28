@@ -1,7 +1,329 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-1 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Atte Ahmavaara | CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="center">Assignment 3: PathTracer</h1>
+    <h2 align="center">Atte Ahmavaara</h2>
+
+    <div class="padded">
+
+        <p>In this project I implemented a 3D renderer using raytracing. To accomplish this, I began by implementing basic ray generation and geometry intersecting, and continued on to optimize intersections by using a Bounding Volume Hierarchy. For lighting, I implemented both direct and global illumination. To improve render times without a statistically significant difference in image quality, I implemented adaptive sampling at the ray-generation layer.</p>
+
+    <br/>
+    <h2 align="center">Part 1: Ray Generation and Intersection</h2>
+
+        <p>When generating a ray at a given normalized (x,y) screen space coordinate, I start by translating and scaling the coordinate system from the range [0,1] per axis to a range of [-1,+1] per axis. Then I compute the angular bounds for each axis with respect to the field of view, and then map the range [-1,+1] for each axis to the computed angular bounds. Finally, I apply the camera to world transformation, to match the rotation of the camera.</p>
+
+        <p>To implement Ray-Sphere intersections, I solve the closed form solution to the quadratic formula, and make sure to account for any cases when the roots are complex numbers (no intersection) or if the intersection is behind the ray. To implement Ray-Triangle intersections, I use the Moller-Trumbore algorithm to compute the barycentric coordinates of the potential intersection, and check whether the barycentric coordinates of the potential intersection lie within the given triangle. More specifically, the Moller-Trumbore algorithm is a closed form solution to find the coordinates of the intersection of the ray with the plane on which the triangle lies. Thus, checking that the barycentric coordinates lie within the bounds of the triangle, [0,1] for each axis, is sufficient to confirm that the ray intersects with the plane.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="center">
+                        <img src="images/1_1.png" width="360px" />
+                        <figcaption align="center">CBempty.dae</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/1_2.png" width="360px" />
+                        <figcaption align="center">CBspheres_lambertian.dae</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/1_3.png" width="360px" />
+                        <figcaption align="center">CBdragon.dae</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+    <br/>
+    <h2 align="center">Part 2: Bounding Volume Hierarchy</h2>
+
+        <p>To construct a BVH node from a list of primitives, I begin by computing the bounding box that contains all the primitives. If I have few enough primitives in the list, then this is a leaf node, and we are done. Otherwise, I select the longest axis of the bounding box as the split axis, and proceed to compute the mean centroids of all the primitives in the given list. I use that computed centroid to partition all the primitives along the aforementioned chosen axis into a left and right set. Finally, I recursively construct the left and right nodes by the same process.</p>
+
+        <p>As mentioned above, the heuristic I used to pick the split point chooses the split axis as the axis with the greatest total range (|max - min|). Then, I select the split value as the mean of centroids of all the primitives.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="center">
+                        <img src="images/2_4_fast.png" width="360px" />
+                        <figcaption align="center">CBlucy.dae</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/2_2_fast.png" width="360px" />
+                        <figcaption align="center">maxplanck.dae</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/2_5_fast.png" width="360px" />
+                        <figcaption align="center">CBdragon.dae</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p>I noticed a very significant decrease in render times when using the BVH. With the naive implementation, render times correspond roughly linearly to the number of primitives in the scene, while with the BVH implementation, the runtime is nearly constant (in reality it's log(#prims), but in practice it's near constant). The source of the optimization becomes clear when looking at the average number of intersection tests per ray. In the naive implementation, the number of tests per ray is proportional to the number of primitives, since every primitive is tested for every ray (except in edge cases). This results in a significant number of relatively expensive intersection tests per ray. Looking at the number of tests per ray for the BVH implementation, we see that this value is near constant with respect to the number of primitives, and moreover a very small constant. This optimization works because it is very efficient to check if a ray intersects a simple axis-aligned bounding box, which is all that is needed at each of the expected log(#prims) nodes that it takes to reach a leaf node in the tree. Then, checking intersections at a single leaf node should be constant, since the number of primitives per leaf is bounded above.</p>
+
+        <div align="center">
+            <table cellspacing="10px">
+                <tr style="border-bottom:1px">
+                    <th>Mesh</th>
+                    <th># Primitives</th>
+                    <th>Naive Runtime</th>
+                    <th>BVH Runtime</th>
+                    <th>Naive Test/Ray</th>
+                    <th>BVH Test/Ray</th>
+                </tr>
+                <tr>
+                    <td align="center">cow</td>
+                    <td align="center">5856</td>
+                    <td align="center">18.0573s</td>
+                    <td align="center">0.0291s</td>
+                    <td align="center">683.800040</td>
+                    <td align="center">2.143081</td>
+                </tr>
+                <tr>
+                    <td align="center">maxplanck</td>
+                    <td align="center">50801</td>
+                    <td align="center">161.5224s</td>
+                    <td align="center">0.0361s</td>
+                    <td align="center">6044.356926</td>
+                    <td align="center">2.447052</td>
+                </tr>
+                <tr>
+                    <td align="center">teapot</td>
+                    <td align="center">2464</td>
+                    <td align="center">7.7617s</td>
+                    <td align="center">0.0295s</td>
+                    <td align="center">285.795286</td>
+                    <td align="center">2.118976</td>
+                </tr>
+            </table>
+        </div>
+
+    <br/>
+    <h2 align="center">Part 3: Direct Illumination</h2>
+
+        <p>For each sample in direct lighting using uniform hemisphere sampling, I generate a new ray in the direction of the sample and check whether the ray intersects with the scene. If the ray does intersect the scene, I compute the reflectance at the original intersection and the emission from the new intersection, and multiply them, along with cosine weighting, into the rendering equation. All of these samples are averaged to get the final color for the ray.</p>
+
+        <p>In direct lighting using importance sampling, I iterate over the lights and sample the light once if it is a point light, and ns_area_light times if it is an area light. For each of these emission samples, I generate a new ray in the direction of the sample and check whether the ray intersects with the scene. Different to uniform hemisphere sampling, this intersection check is to check whether there is an object in between the light and our ray. If the ray does intersect the scene then the sampled emission is simply ignored, but if the light is not blocked, I compute the reflectance at the original intersection, and multiply that by the sampled emission, along with cosine weighting, into the rendering equation. All of these samples are averaged to get the final color for the ray--note that for a point light, this is an average of one sample. Each light in the scene has its own independent contribution to the ray's pixel, and these contributions are averaged to get the final pixel value.</p>
+
+        <p>We can see below that uniform hemisphere sampling results in significantly more noisy lighting than importance sampling. This is because any sample that does not happen to intersect with a light in the scene is automatically ignored, since there is no emission coming from that sample. Thus, we are effectively throwing away samples, whereas importance sampling ensures that each sample is meaningful, whether meaningful in terms of adding to the light or softening a shadow if occluded by another object. Further, scenes with point lights (like dragon.dae) are practically impossible to render with uniform sampling, since the probability of exactly sampling a direction that intersects with an infinitesimally small point light is effectively 0, leaving us with no light at all.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="center">
+                        <img src="images/3_1_uniform.png" width="480px" />
+                        <figcaption align="center">CBbunny.dae with Uniform Sampling</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/3_1_importance.png" width="480px" />
+                        <figcaption align="center">CBbunny.dae with Importance Sampling</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <img src="images/3_3_uniform.png" width="480px" />
+                        <figcaption align="center">CBspheres_lambertian.dae with Uniform Sampling</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/3_3_importance.png" width="480px" />
+                        <figcaption align="center">CBspheres_lambertian.dae with Importance Sampling</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <img src="images/3_2_uniform.png" width="480px" />
+                        <figcaption align="center">dragon.dae with Uniform Sampling</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/3_2_importance.png" width="480px" />
+                        <figcaption align="center">dragon.dae with Importance Sampling</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <br/>
+        <p>We can see that having a greater number of light rays significantly decreases the noise in the image, specifically in soft shadows. This makes sense, since soft shadows exist when a light source is partially occluded by an object, but not entirely. With only 1 sample per light, and 1 sample per pixel, we the renderer only gets a binary value (light or dark) where there should be a soft shadow. This leads to noise at a per-pixel level, whereas having more samples per pixels allows for a "gray" value rather than the aforementioned binary value.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="center">
+                        <img src="images/3_4_l1.png" width="480px" />
+                        <figcaption align="center">1 Light Ray</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/3_4_l4.png" width="480px" />
+                        <figcaption align="center">4 Light Rays</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <img src="images/3_4_l16.png" width="480px" />
+                        <figcaption align="center">16 Light Rays</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/3_4_l64.png" width="480px" />
+                        <figcaption align="center">64 Light Rays</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <br/>
+        <h2 align="center">Part 4: Global Illumination</h2>
+
+        <p>To compute indirect illumination, I start by computing the direct lighting for the given ray-intersection. Then, if we have not reached the maximum ray depth, I compute the reflectance at the intersection for a sampled bounce direction, and then project out a ray in this bounce direction. If this ray intersects with the scene, then with probability 70% we recursively call the indirect lighting function to find the effects of future bounces after this new ray. After finding the effects of future bounces, I combine the sampled reflectance, cosine weighting, and normalization by the pdf and continuation probability to find the extra lighting/color that needs to be added to our current pixel value to take into account future bounces.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="center">
+                        <img src="images/4_1.png" width="480px" />
+                        <figcaption align="center">CBbunny.dae</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/4_2.png" width="480px" />
+                        <figcaption align="center">CBspheres_lambertian.dae</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <br/>
+        <p>Direct Illumination only takes into account one bounce of light. This makes scenes look quite unnatural and harsh. By looking at the extra lighting added by indirect lighting, we see that the true value of global illumination is adding softness and consistency, "fill", into the scene's lighting.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="center">
+                        <img src="images/4_3_directonly.png" width="480px" />
+                        <figcaption align="center">Direct Lighting Only</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/4_3_indirectonly.png" width="480px" />
+                        <figcaption align="center">Indirect Lighting Only</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <br/>
+        <p>Comparing maximum ray depths 0, 1, 2, 3, and 100, we can see that a significant portion of the lighting is accounted for in only 1 ray bounce. I notice a slight improvement at depths 2 and 3 in the red highlight on the bunny, but in terms of the lighting "fill", 1 or 2 ray bounces get to a very similar result as 100 ray bounces.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="center">
+                        <img src="images/4_4_m0.png" width="480px" />
+                        <figcaption align="center">Max Ray Depth = 0</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/4_4_m1.png" width="480px" />
+                        <figcaption align="center">Max Ray Depth = 1</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <img src="images/4_4_m2.png" width="480px" />
+                        <figcaption align="center">Max Ray Depth = 2</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/4_4_m3.png" width="480px" />
+                        <figcaption align="center">Max Ray Depth = 3</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <img src="images/4_4_m100.png" width="480px" />
+                        <figcaption align="center">Max Ray Depth = 100</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <br/>
+        <p>Comparing per-pixel sample rates of 1, 2, 4, 8, 16, 64, and 1024, we see the importance of averaging over many samples in global illumination. Global illumination operates on a significant amount of randomness and sampling, and thus having anything less than, say, 8 samples per pixel is extremely noisy. Even with a sampling rate of 64, there is still some visible noise in the image.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="center">
+                        <img src="images/4_5_s1.png" width="480px" />
+                        <figcaption align="center">Per-Pixel Sample Rate = 1</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/4_5_s2.png" width="480px" />
+                        <figcaption align="center">Per-Pixel Sample Rate = 2</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <img src="images/4_5_s4.png" width="480px" />
+                        <figcaption align="center">Per-Pixel Sample Rate = 4</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/4_5_s8.png" width="480px" />
+                        <figcaption align="center">Per-Pixel Sample Rate = 8</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <img src="images/4_5_s16.png" width="480px" />
+                        <figcaption align="center">Per-Pixel Sample Rate = 16</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/4_5_s64.png" width="480px" />
+                        <figcaption align="center">Per-Pixel Sample Rate = 64</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <img src="images/4_5_s1024.png" width="480px" />
+                        <figcaption align="center">Per-Pixel Sample Rate = 1024</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <br/>
+        <h2 align="center">Part 5: Adaptive Sampling</h2>
+
+        <p>To implement adaptive sampling, I added two new variables to keep track of while sampling per pixel: sum of illuminances and sum of squared illuminances. Using these variables, every samplesPerBatch samples I compute the mean and variance of past illuminances. If the variance is small enough relative to the mean, then I deem this pixel's value as converged, and stop computing new samples.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="center">
+                        <img src="images/5_1.png" width="480px" />
+                        <figcaption align="center">CBbunny.dae, Adaptively Sampled</figcaption>
+                    </td>
+                    <td align="center">
+                        <img src="images/5_1_rate.png" width="480px" />
+                        <figcaption align="center">Sampling Rate</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+</div>
+</body>
 </html>
+
+
+
+
