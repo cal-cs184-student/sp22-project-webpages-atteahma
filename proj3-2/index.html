@@ -1,7 +1,168 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 3-2 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Atte Ahmavaara  |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Assignment 3: PathTracer (Part 2)</h1>
+
+    <h2 align="middle">Atte Ahmavaara</h2>
+
+    <div class="padded">
+        <p>In this addendum to the previous project, I implemented microfacet materials and depth of field. To support microfacet materials, I added a new normal distribution function which follows the Beckmann distribution, a method for approximating the Fresnel term, and importance sampling for the Beckmann normal distribution function. To simulate depth of field, I modified the ray generation algorithm to model a thin-lens approximation, rather than assuming a pin-hole camera model.</p>
+
+    <h2 align="middle">Part 2: Microfacet Materials</h2>
+        <p>In this part I implemented a new normal distribution function which follows the Beckmann distribution, a method for approximating the Fresnel term, and importance sampling for the Beckmann normal distribution function. The Beckmann NDF simply involves calculating the distribution function:</p>
+
+        <div align="center">
+            <img src="images/2_beckmann_ndf.png" width="180px">
+        </div>
+
+        <p>The air-conductor Fresnel approximation involves calculating the following equations for each color channel:</p>
+
+        <div align="center">
+            <img src="images/2_fresnel.png" width="320px">
+        </div>
+
+        <p>To importance sample the Beckmann normal distribution function, I used the inversion method on the Beckmann PDF to get the &phi; and &theta; values for our half-vector. Then, I reflect the given w_out vector over the half-vector to get the sampled w_in vector.</p>
+
+        <p>We can see below the effect of changing the alpha value of the rendered microfacet material. Higher values of alpha result in a more matte look, while lowering values of alpha make the material shinier and glossier. Specifically, the reflections we see in lower alpha value materials are clearer, with a more polished metal look rather than 'worn' metal. Further, I noticed that at very low alpha values, some white noise is introduced to the image, likely due to the very specular nature of the material combined with a lower than optimal sampling rate. I found that disabling adaptive sampling and raising the sampling rate helped alleviate this issue, leading me to believe that changing adaptive sampling to look at RGB values rather than illuminance could help further alleviate this issue without needing to disable adaptive sampling entirely.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="middle">
+                        <img src="images/2_1_05.png" width="480px"/>
+                        <figcaption align="middle">&alpha; = 0.5</figcaption>
+                    </td>
+                    <td align="middle">
+                        <img src="images/2_1_025.png" width="480px"/>
+                        <figcaption align="middle">&alpha; = 0.25</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="middle">
+                        <img src="images/2_1_005.png" width="480px"/>
+                        <figcaption align="middle">&alpha; = 0.05</figcaption>
+                    </td>
+                    <td align="middle">
+                        <img src="images/2_1_0005.png" width="480px"/>
+                        <figcaption align="middle">&alpha; = 0.005</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p>Below we see one render using cosine hemisphere sampling and another render using our Beckmann NDF sampling. The bunny rendered using cosine hemisphere sampling has much darker edges, specifically the parts of the mesh that have normals orthogonal to the camera rays. I believe cosine hemisphere sampling generates rays that collide too much with the microfacets in the same mesh, which would lead to darker colors.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="middle">
+                        <img src="images/2_2_hemisphere.png" width="480px"/>
+                        <figcaption align="middle">Cosine Hemisphere Sampling</figcaption>
+                    </td>
+                    <td align="middle">
+                        <img src="images/2_2_importance.png" width="480px"/>
+                        <figcaption align="middle">Beckmann NDF Importance Sampling</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p>The images below was rendered with the microfacet parameters corresponding to Iron.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="middle">
+                        <img src="images/2_3_05.png" width="480px"/>
+                        <figcaption align="middle">&alpha; = 0.5</figcaption>
+                    </td>
+                    <td align="middle">
+                        <img src="images/2_3_01.png" width="480px"/>
+                        <figcaption align="middle">&alpha; = 0.1</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+    <h2 align="middle">Part 4: Depth of Field</h2>
+
+        <p>In this part I implemented the thin-lens model for simulating depth of field. The change for this was relatively simple: I simply move the origin of the rays originating at the camera to a randomly sampled point on a disk directly in front of the "pinhole" camera origin. The ray is still directed towards the same point as with the pin-hole camera model. Further, the sampled point follows a uniform distribution with respect to the direction from the center of the lens, but follows a beta(2, 1) distribution with respect to the distance from the center of the lens, resulting in a uniform sampling over a unit disk. The effect of this is that the radiosity from multiple samples on the thin lens is captured into each pixel on our sensor / image plane, giving us simulated focal distance and lens radius to play with. This allows us to simulate depth of field and a focus plane.</p>
+
+        <div align="center">
+            <img src="images/4_vectors.jpg" width="480px">
+        </div>
+
+        <p>Below I show 4 images, each focused on a different part of the scene.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="middle">
+                        <img src="images/4_1_nose.png" width="480px"/>
+                        <figcaption align="middle">Focus on Snout</figcaption>
+                    </td>
+                    <td align="middle">
+                        <img src="images/4_1_body.png" width="480px"/>
+                        <figcaption align="middle">Focus on Body</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="middle">
+                        <img src="images/4_1_tail.png" width="480px"/>
+                        <figcaption align="middle">Focus on Tail</figcaption>
+                    </td>
+                    <td align="middle">
+                        <img src="images/4_1_wall.png" width="480px"/>
+                        <figcaption align="middle">Focus on Blue Wall</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p>Below I show 4 images, each focused on the snout of the dragon, but with different aperture sizes.</p>
+
+        <div align="center">
+            <table style="width:100%">
+                <tr>
+                    <td align="middle">
+                        <img src="images/4_2_005.png" width="480px"/>
+                        <figcaption align="middle">Lens Radius = 0.05</figcaption>
+                    </td>
+                    <td align="middle">
+                        <img src="images/4_2_015.png" width="480px"/>
+                        <figcaption align="middle">Lens Radius = 0.15</figcaption>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="middle">
+                        <img src="images/4_2_025.png" width="480px"/>
+                        <figcaption align="middle">Lens Radius = 0.25</figcaption>
+                    </td>
+                    <td align="middle">
+                        <img src="images/4_2_035.png" width="480px"/>
+                        <figcaption align="middle">Lens Radius = 0.35</figcaption>
+                    </td>
+                </tr>
+            </table>
+        </div>
+</div>
+</body>
 </html>
+
+
+
+
