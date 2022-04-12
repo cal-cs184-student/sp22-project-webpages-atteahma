@@ -1,1 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <style>
+          body {
+            padding: 100px;
+            width: 1000px;
+            margin: auto;
+            text-align: left;
+            font-weight: 300;
+            font-family: 'Open Sans', sans-serif;
+            color: #121212;
+          }
+      
+          h1,
+          h2,
+          h3,
+          h4 {
+            font-family: 'Source Sans Pro', sans-serif;
+          }
+        </style>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+<title>Final Proposal | CS184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+</head>
+<body>
+<br />
+<h1 align="middle">Proposal: Enabling GPU Ray Tracing using NVIDIA OptiX</h1>
 
+    <h3 align="middle">Atte Ahmavaara, Kelly Liu, Lulu Yu, Alexander Yu</h3>
+
+    <h2 align="middle">Summary</h2>
+
+        <p>In our project we will be using the Nvidia OptiX ray tracing API for hardware acceleration to achieve significant speedup in our in-class path tracer. The GUI and UX will be adapted to be more interactive to allow the user to leverage the significantly faster render times. We will be tackling GPU based acceleration, which is why we decided to use Nvidia OptiX in addition to the provided framework of the course project.</p>
+
+    <h2 align="middle">Problem Description</h2>
+
+        <p>The ray tracer we implemented in Project 3 is effective, but not efficient. The problem we intend to tackle is making the ray tracer efficient and effective. This is important as it allows us to achieve industry standard rendering, improve efficiency in ray tracing, add new capabilities to our ray tracer (like live-rendering scenes), and improve speed up by orders of magnitude. Our solution hopes to leverage NVIDIA OptiX APIs to implement optimal ray tracing performance on the GPU. Some challenges we may face include learning the API calls required and its documentation, integrating external frameworks outside of project scope. Further, almost all of the work from project 3 will need to be ported to NVIDIA OptiX due to how centrally the framework operates.</p>
+
+    <h2 align="middle">Goals and Deliverables</h2>
+
+        <p>To showcase our results, we plan to use many of the classic scenes from class: CBbunny, CBdragon, CBlucy, CBspheres, etc. Since our goals are purely performance driven, we do not need additional/special scenes to show progress. Rather, we will be presenting both quality and performance comparisons, consisting of equal-time quality comparisons, and similar-quality time comparisons.</p>
+
+        <p>At a baseline, we aim to deliver a near-clone of the in-class ray tracer, but ported entirely to the GPU, inside of NVIDIA's vast OptiX engine. This will likely require a near complete rewrite of all ray tracing infrastructure of the in-class ray tracer, due to using NVIDIA's data structures and engine, including BVH construction and traversal, rather than CGL, the boiler-plate code given to us by course staff, and our previously self-implemented tasks. We would expect to see at least a single order of magnitude difference to the CPU implementation, due to the embarrassingly parallel problem that is ray tracing thousands of pixels.</p>
+
+        <p>Subsequent features we want to implement include changes to the GUI and UX such that the user can truly leverage and “feel” the speedup / power of the pipeline. Whereas before it would take many minutes to render a tiny change in lighting or focus, we want to be able to control it using intuitive mouse controls in near real time, at least on smaller images. Further, Nvidia OptiX includes many opportunities to use AI-based denoising and general image quality improvements on top of the core ray tracing features. If left with extra bandwidth for this project, we hope to take advantage of some of these for both additional quality and speed, likely by requiring less samples to achieve the same quality.</p>
+    
+    <h2 align="middle">Schedule</h2>
+
+        <p>Week 1 (April 11 - April 18)</p>
+
+        <ul>
+            <li>Research Nvidia OptiX API, learn how it works and how to use it</li>
+            <li>Review feedback from project proposal and revise project as fit</li>
+            <li>Re-design the structure of our ray tracing pipeline to better match the core OptiX pipeline/engine</li>
+        </ul>
+
+        <p>Week 2 (April 19 - April 25)</p>
+
+        <ul>
+            <li>Implement the new design while using OptiX API calls</li>
+            <li>Create Milestone webpage</li>
+            <li>Implement Milestone features into the project</li>
+            <li>Create Milestone presentation and film video</li>
+        </ul>
+
+        <p>Week 3 (April 26 - May 2)</p>
+        <ul>
+            <li>April 26: Milestone 1 Due</li>
+            <li>Continue implementation, hopefully be able to work on stretch goals / GUI changes</li>
+        </ul>
+
+        <p>Week 4 (May 3 - May 10)</p>
+        <ul>
+            <li>Prepare final deliverables</li>
+            <li>Continue implementation, hopefully working on stretch goals by now.</li>
+            <li>Finalize and clean the implementation</li>
+            <li>May 10: Final deliverables Due</li>
+        </ul>
+    
+    <h2 align="middle">Resources</h2>
+        
+        <p>Documentation</p>
+
+        <ul>
+            <li>https://developer.nvidia.com/rtx/ray-tracing/optix</li>
+            <li>Online Forums: Stackoverflow</li>
+            <li>How to get started with OptiX 7: https://devblogs.nvidia.com/how-to-get-started-with-optix-7/</li>
+            <li>Documentation: https://raytracing-docs.nvidia.com/</li>
+            <li>Learn more about the AI-accelerated denoiser: https://developer.nvidia.com/optix-denoiser</li>
+            <li>Developer Forum: https://devtalk.nvidia.com/default/board/90/</li>
+            <li>GTC on Demand: http://on-demand-gtc.gputechconf.com/gtcnew/on-demand-gtc.php?searchByKeyword=optix&searchItems=&sessionTopic=&sessionEvent=&sessionFormat=&submit=&select=+</li>
+            <li>OptiX GPU Ray Tracing ACM paper: http://cacm.acm.org/magazines/2013/5/163758-gpu-ray-tracing/fulltext</li>
+        </ul>
+
+        <p>For computing we have a i9-10900K with a RTX 3090 on linux for us to realize our GPU improvements.</p>
+</body>
+</html>
