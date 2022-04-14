@@ -1,7 +1,356 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Project 4 here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+      font-family: 'Source Sans Pro', sans-serif;
+      text-align: center;
+  }
+  td, tr {
+      alignment: center;
+      text-align: center;
+  }
+</style>
+<title>Atte Ahmavaara | CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+<h1>CS 184: Computer Graphics and Imaging, Spring 2022</h1>
+<h1>Project 4: Cloth Simulator</h1>
+<h2>Atte Ahmavaara</h2>
+<h4 align="middle">https://cal-cs184-student.github.io/sp22-project-webpages-atteahma/proj4/index.html</h4>
+<br/>
+
+    <p>In this project I implemented cloth physics by simulating cloth as a grid of point masses and springs. I constrain the cloth to handle collisions with spheres and planes, as well as collisions with itself. I finish by implementing a series of GLSL shaders to rasterize the cloth with various materials and textures.</p>
+
+<br/>
+<br/>
+<h2>Part I: Masses and springs</h2>
+
+    <p>To build the point mass grid and spring lattice, I first create an equally spaced point mass grid with the desired cloth resolution. Then for every point mass, I create its associated structural, shearing, and bending springs, given that both of the point masses to which the spring is connected to are valid.</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/1_1.png" width="360px"/>
+                <figcaption align="middle">All constraints</figcaption>
+            </td>
+            <td>
+                <img src="images/1_2_noshear.png" width="360px"/>
+                <figcaption align="middle">Structural and Bending constraints</figcaption>
+            </td>
+            <td>
+                <img src="images/1_2_onlyshear.png" width="360px"/>
+                <figcaption align="middle">Shearing constraints</figcaption>
+            </td>
+        </tr>
+    </table>
+
+<br/>
+<br/>
+<br/>
+<h2>Part II: Simulation via Numerical Integration</h2>
+
+    <p>To iterate the physics forward in the simulation, I use Verlet integration with deformation constraints (<a href="https://www.cs.rpi.edu/~cutler/classes/advancedgraphics/S14/papers/provot_cloth_simulation_96.pdf">SIGGRAPH 1995 Provot paper</a>). Verlet integration relies on the difference in position divided by the elapsed time being velocity and takes into account arbitrary forces in the simple quadratic position-velocity-acceleration kinematics equations. To implement deformation constraints, I have each point mass remember its previous position, and then apply corrections to each point mass's computed position after Verlet integration is complete.</p>
+
+    <p>Below we see the difference caused by high and low springs constants. With the low spring constant, we see a lot of small ripples in the cloth. This is in contrast to the high spring constant, where the cloth looks very rigid. There is not a lot of "play" in the cloth, and its local "stretching" is very limited. If we were to describe the cloth as a geometric series with consecutive ratio |R| < 1, the low spring constant cloth has a |R| closer to 1 than the high spring constant cloth, which has |R| closer to 0. Predictably, the low spring constant cloth has a wider range in terms of constraints, so it droops down lower at rest.</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/2_1_lowks.png" width="360px"/>
+                <figcaption align="middle">Low Spring Constant (100 N/m)</figcaption>
+            </td>
+            <td>
+                <img src="images/2_1_highks.png" width="360px"/>
+                <figcaption align="middle">High Spring Constant (25000 N/m)</figcaption>
+            </td>
+        </tr>
+    </table>
+
+    <br/>
+    <br/>
+
+    <p>Below we see the difference caused by high and low densities. With a low density, the cloth is very susceptible to high frequency, "fast and small", ripples. When the cloth falls, it does not hold its shape very well, and does not fall very far. This is in contrast to the high density cloth, which falls much more emphatically. I generally see more low frequency, slow ripples in high density clothes.</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/2_1_lowdensity.png" width="360px"/>
+                <figcaption align="middle">Low Density (1 g/cm^2)</figcaption>
+            </td>
+            <td>
+                <img src="images/2_1_highdensity.png" width="360px"/>
+                <figcaption align="middle">High Density (100 g/cm^2)</figcaption>
+            </td>
+        </tr>
+    </table>
+
+    <br/>
+    <br/>
+
+    <p>Below we see the difference caused by high and low damping. High dampening results in very smooth movement by the cloth, while low dampening allows for a lot higher frequency oscillations and the cloth reacts very quickly to any collisions or other physics effects.</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/2_lowdamp.png" width="360px"/>
+                <figcaption align="middle">Low Damping (~0.05)</figcaption>
+            </td>
+            <td>
+                <img src="images/2_highdamp.png" width="360px"/>
+                <figcaption align="middle">High Damping (~0.70)</figcaption>
+            </td>
+        </tr>
+    </table>
+
+    <br/>
+    <br/>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/2_2.png" width="720px"/>
+                <figcaption align="middle">Final resting position of scene/pinned4.json</figcaption>
+            </td>
+        </tr>
+    </table>
+
+<br/>
+<br/>
+<br/>
+<h2>Part III: Handling Collisions with Other Objects</h2>
+
+    <p>To implement external collisions for each object, for each point mass, I check whether it is inside the object, and if it is, I "push" the point mass back to the projected nearest point on the object. For fine tuning, I scale this correction by the friction associated with the object.</p>
+
+    <p>Below I show the differences in colliding properties between various spring constants. The small spring constant cloth seems very weak and frail. It takes the shape of the sphere/colliding object very closely, and is influenced by gravity more, leading to a large amount of small folds. The high spring constant cloth is extremely rigid, looking more like a rough tarp. It is very unwilling to conform to the sphere that it lies on, and does not have finely detailed folds. The medium spring constant cloth looks to be at an approximate midpoint in appearance compared to the low and high spring constant cloths, with all of the properties in appearance halved. It has mainly larger folds, but still has all of its edges tangent to the downwards direction.</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/3_1_500.png" width="360px"/>
+                <figcaption align="middle">ks = 500 N/m</figcaption>
+            </td>
+            <td>
+                <img src="images/3_1_5000.png" width="360px"/>
+                <figcaption align="middle">ks = 5000 N/m</figcaption>
+            </td>
+            <td>
+                <img src="images/3_1_50000.png" width="360px"/>
+                <figcaption align="middle">ks = 50000 N/m</figcaption>
+            </td>
+        </tr>
+    </table>
+
+    <br/>
+    <br/>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/3_2.png" width="720px"/>
+                <figcaption align="middle">Cloth at rest on plane</figcaption>
+            </td>
+        </tr>
+    </table>
+
+<br/>
+<br/>
+<br/>
+<h2>Part IV: Handling Self-Collisions</h2>
+
+    <p>In this part I implemented cloth self collisions. The naive algorithm runs in quadratic time, but I implemented this in linear time by using a custom spacial hashing model. This works by splitting the coordinate system into statistically small (by resolution of cloth) 3D cubes, and only checking for collisions within that small box.</p>
+
+    <p>Below we see the cloth falling and folding onto itself. I found it specifically fascinating how the cloth is able to fall nearly flat onto the ground, with a small lip still folded over, and then slowly unfold from one edge to another, because the mass of the small lip was not enough to keep it folded over (t=[4,6]).</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/4_1_1.png" width="360px"/>
+                <figcaption align="middle">t = 1</figcaption>
+            </td>
+            <td>
+                <img src="images/4_1_2.png" width="360px"/>
+                <figcaption align="middle">t = 2</figcaption>
+            </td>
+            <td>
+                <img src="images/4_1_3.png" width="360px"/>
+                <figcaption align="middle">t = 3</figcaption>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <img src="images/4_1_4.png" width="360px"/>
+                <figcaption align="middle">t = 4</figcaption>
+            </td>
+            <td>
+                <img src="images/4_1_5.png" width="360px"/>
+                <figcaption align="middle">t = 5</figcaption>
+            </td>
+            <td>
+                <img src="images/4_1_6.png" width="360px"/>
+                <figcaption align="middle">t = 6</figcaption>
+            </td>
+        </tr>
+    </table>
+
+    <br/>
+    <br/>
+
+    <p>Below we see the effects of varying densities and spring constants on self collisions. The low density cloth is very quick to adjust itself, and tends to spread out during self collisions, while the high density cloth tends to fall on itself much more, and adjust slower to self collisions. The low spring constant cloth is very "bendy" and does not maintain its shape very well. It is quick to deform, but unlike the low density cloth, it also deforms violently. The high spring constant cloth behaves in a very rigid and deliberate way, where it spreads out over a good distance, and leaves plenty of space for itself between folds, specifically around the curves/folds.</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/4_2_lowdensity.png" width="360px"/>
+                <figcaption align="middle">Low Density (1 g/cm^2)</figcaption>
+            </td>
+            <td>
+                <img src="images/4_2_highdensity.png" width="360px"/>
+                <figcaption align="middle">High Density (100 g/cm^2)</figcaption>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <img src="images/4_2_lowks.png" width="360px"/>
+                <figcaption align="middle">Low Spring Constant (500 N/m)</figcaption>
+            </td>
+            <td>
+                <img src="images/4_2_highks.png" width="360px"/>
+                <figcaption align="middle">High Spring Constant (50000 N/m)</figcaption>
+            </td>
+        </tr>
+    </table>
+
+
+<br/>
+<br/>
+<br/>
+<h2>Part V: Shaders</h2>
+
+    <p>A shader program is a script run on many gpu cores at once. The purpose is to, fundamentally, take a mostly shared data source, and compute many individual results from that data. Vertex shaders operate per vertex of a model and compute various bits of data about the mesh such as tangent and normal vectors. Then a fragment shader runs per pixel, and using the computed data from the vertex shader, outputs a specific color for that pixel.</p>
+
+    <p>The Blinn-Phong shader model works by splitting the problem into 3 parts: ambient shading, diffuse shading, and specular shading. Ambient shading takes into account the inherent color, no matter the light, of an object. Diffuse shading takes into account the basic properties of light and color interacting. Finally, specular shading adds certain sheen and light based reflections to the material.</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/5_1_ambient.png" width="360px"/>
+                <figcaption align="middle">Ambient Shading</figcaption>
+            </td>
+            <td>
+                <img src="images/5_1_diffuse.png" width="360px"/>
+                <figcaption align="middle">Diffuse Shading</figcaption>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <img src="images/5_1_specular.png" width="360px"/>
+                <figcaption align="middle">Specular Shading</figcaption>
+            </td>
+            <td>
+                <img src="images/5_1_all.png" width="360px"/>
+                <figcaption align="middle">Ambient + Diffuse + Specular Shading (Blinn-Phong)</figcaption>
+            </td>
+        </tr>
+    </table>
+
+    <br/>
+    <br/>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/5_2.png" width="360px"/>
+                <figcaption align="middle">Wood Texture Mapped to Cloth and Sphere</figcaption>
+            </td>
+        </tr>
+    </table>
+
+    <br/>
+    <br/>
+
+    <p>Below we see a comparison of bump mapping and displacement mapping. We can see that with bump mapping, the actual geometry is not augmented, only the colors change. At a distance, this is perfectly fine and we are unable to tell the difference. Once we move the camera closer to the mesh, we start to see the utility of displacement mapping, which actually augments the position of the vertices before displaying them on the screen. The physics don't change, but where the vertex appears to be changes. One issue with displacement mapping is that if you try to push it too far, as in for more than a small amount of distant detail, the displaced vertices can appear in radically different places than where they actually are, causing issues in physics.</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/5_3_1_bump.png" width="360px"/>
+                <figcaption align="middle">Bump Mapping</figcaption>
+            </td>
+            <td>
+                <img src="images/5_3_1_displacement.png" width="360px"/>
+                <figcaption align="middle">Displacement Mapping</figcaption>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <img src="images/5_3_2_bump.png" width="360px"/>
+                <figcaption align="middle">Bump Mapping</figcaption>
+            </td>
+            <td>
+                <img src="images/5_3_2_displacement.png" width="360px"/>
+                <figcaption align="middle">Displacement Mapping</figcaption>
+            </td>
+        </tr>
+    </table>
+
+    <br/>
+    <br/>
+
+    <p>Below we see the differences in mesh resolution under bump and displacement mapping. There is not a significant difference in bump mapping, but displacement mapping is heavily affected by mesh resolution. Fundamentally, giving the vertex shader less vertices to work with ends up with the mesh looking piecewise smooth, as in the augmented vertices look unnatural.</p>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/5_3_16_bump.png" width="360px"/>
+                <figcaption align="middle">Bump Mapping, Mesh Resolution 16</figcaption>
+            </td>
+            <td>
+                <img src="images/5_3_16_displacement.png" width="360px"/>
+                <figcaption align="middle">Displacement Mapping, Mesh Resolution 16</figcaption>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <img src="images/5_3_128_bump.png" width="360px"/>
+                <figcaption align="middle">Bump Mapping, Mesh Resolution 128</figcaption>
+            </td>
+            <td>
+                <img src="images/5_3_128_displacement.png" width="360px"/>
+                <figcaption align="middle">Displacement Mapping, Mesh Resolution 128</figcaption>
+            </td>
+        </tr>
+    </table>
+
+    <br/>
+    <br/>
+
+    <table width="100%">
+        <tr>
+            <td>
+                <img src="images/5_4_1.png" width="360px"/>
+                <figcaption align="middle">Mirror, Pre-simulation</figcaption>
+            </td>
+            <td>
+                <img src="images/5_4_2.png" width="360px"/>
+                <figcaption align="middle">Mirror, at Rest</figcaption>
+            </td>
+        </tr>
+    </table>
+
+</body>
 </html>
